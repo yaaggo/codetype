@@ -12,7 +12,12 @@ export const getAlgorithms = async () => {
             .order('sort_order', { ascending: true });
 
         if (error) throw error;
-        return data || [];
+
+        // Map group_path to group for frontend compatibility
+        return (data || []).map(algo => ({
+            ...algo,
+            group: algo.group_path // Map DB column to frontend property
+        }));
     } catch (error) {
         console.error('Error fetching algorithms:', error);
         return [];
@@ -21,14 +26,27 @@ export const getAlgorithms = async () => {
 
 export const saveCustomAlgorithm = async (algo) => {
     try {
+        const dbAlgo = {
+            id: algo.id,
+            title: algo.title,
+            group_path: algo.group, // Map 'group' to 'group_path'
+            kind: algo.kind,
+            code: algo.code,
+            sort_order: algo.sort_order || 0
+        };
+
         const { data, error } = await supabase
             .from('algorithms')
-            .insert([algo])
+            .insert([dbAlgo])
             .select()
             .single();
 
         if (error) throw error;
-        return data;
+
+        return {
+            ...data,
+            group: data.group_path
+        };
     } catch (error) {
         console.error('Error saving algorithm:', error);
         throw error;
@@ -51,7 +69,10 @@ export const updateAlgorithm = async (updatedAlgo) => {
             .single();
 
         if (error) throw error;
-        return data;
+        return {
+            ...data,
+            group: data.group_path
+        };
     } catch (error) {
         console.error('Error updating algorithm:', error);
         throw error;
@@ -147,6 +168,56 @@ export const deleteFolder = async (path) => {
         if (error) throw error;
     } catch (error) {
         console.error('Error deleting folder:', error);
+        throw error;
+    }
+};
+
+export const moveFolder = async (oldPath, newPath) => {
+    try {
+        // 1. Get all algorithms in this folder (and subfolders)
+        const { data: algos, error: algoError } = await supabase
+            .from('algorithms')
+            .select('*')
+            .or(`group_path.eq.${oldPath},group_path.like.${oldPath}/%`);
+
+        if (algoError) throw algoError;
+
+        // 2. Update algorithms paths
+        const algoUpdates = algos.map(algo => {
+            const relativePath = algo.group_path.slice(oldPath.length);
+            const updatedPath = newPath + relativePath;
+            return supabase
+                .from('algorithms')
+                .update({ group_path: updatedPath })
+                .eq('id', algo.id);
+        });
+
+        // 3. Get all folders in this folder (and subfolders)
+        const { data: folders, error: folderError } = await supabase
+            .from('folders')
+            .select('*')
+            .or(`path.eq.${oldPath},path.like.${oldPath}/%`);
+
+        if (folderError) throw folderError;
+
+        // 4. Create new folders and delete old ones
+        const folderUpdates = folders.map(async (folder) => {
+            const relativePath = folder.path.slice(oldPath.length);
+            const updatedPath = newPath + relativePath;
+
+            // Insert new
+            await supabase.from('folders').insert({
+                path: updatedPath,
+                markdown: folder.markdown
+            });
+
+            // Delete old
+            await supabase.from('folders').delete().eq('path', folder.path);
+        });
+
+        await Promise.all([...algoUpdates, ...folderUpdates]);
+    } catch (error) {
+        console.error('Error moving folder:', error);
         throw error;
     }
 };

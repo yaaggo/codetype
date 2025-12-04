@@ -5,7 +5,6 @@ import remarkGfm from 'remark-gfm';
 import 'github-markdown-css/github-markdown.css';
 import { getAlgorithms, saveCustomAlgorithm, updateAlgorithm, bulkUpdateAlgorithms, deleteAlgorithm, getStreak, getProgress, getFolders, saveFolder, deleteFolder } from '../data/database';
 import { Folder, FileCode, Plus, ChevronRight, ChevronDown, Play, Trash2, Flame, Brain, Trophy, Pencil, FolderPlus, FileText, Save, GripVertical, X, BookOpen } from 'lucide-react';
-
 const Home = ({ setView, setTargetAlgo }) => {
     const [algos, setAlgos] = useState([]);
     const [folders, setFolders] = useState({});
@@ -121,8 +120,12 @@ const Home = ({ setView, setTargetAlgo }) => {
     };
 
     // --- Drag and Drop Logic ---
-    const handleDragStart = (e, algoId) => {
-        e.dataTransfer.setData('algoId', algoId);
+    const handleDragStart = (e, id, type = 'algo') => {
+        if (type === 'folder') {
+            e.dataTransfer.setData('folderPath', id);
+        } else {
+            e.dataTransfer.setData('algoId', id);
+        }
         e.dataTransfer.effectAllowed = 'move';
     };
 
@@ -155,13 +158,40 @@ const Home = ({ setView, setTargetAlgo }) => {
         setDragOverItem(null);
     };
 
-    const handleDrop = async (e, targetId, type, targetPath, siblings = []) => {
+    const handleDrop = (e, targetId, type, targetPath, siblings = []) => {
         e.preventDefault();
         e.stopPropagation();
         e.currentTarget.style.background = 'transparent';
         setDragOverItem(null);
 
         const algoId = e.dataTransfer.getData('algoId');
+        const folderPath = e.dataTransfer.getData('folderPath');
+
+        // Handle Folder Move
+        if (folderPath) {
+            if (folderPath === targetPath) return; // Can't drop on itself
+            if (targetPath.startsWith(folderPath)) return; // Can't drop parent into child
+
+            const folderName = folderPath.split('/').pop();
+            const newPath = targetPath ? `${targetPath}/${folderName}` : folderName;
+
+            if (folderPath === newPath) return;
+
+            moveFolder(folderPath, newPath)
+                .then(() => loadData())
+                .then(() => {
+                    setExpandedPaths(prev => {
+                        const next = { ...prev };
+                        delete next[folderPath];
+                        next[newPath] = true;
+                        return next;
+                    });
+                })
+                .catch(err => alert('Error moving folder: ' + err.message));
+            return;
+        }
+
+        // Handle Algorithm Move
         if (!algoId) return;
 
         // Prevent dropping on itself
@@ -178,9 +208,13 @@ const Home = ({ setView, setTargetAlgo }) => {
         if (type === 'folder') {
             // Move to folder
             if (sourceAlgo.group !== targetPath) {
-                await updateAlgorithm({ ...sourceAlgo, group: targetPath });
-                await loadData();
-                setExpandedPaths(prev => ({ ...prev, [targetPath]: true }));
+                // Call async function without await - don't block UI
+                updateAlgorithm({ ...sourceAlgo, group: targetPath })
+                    .then(() => loadData())
+                    .then(() => {
+                        setExpandedPaths(prev => ({ ...prev, [targetPath]: true }));
+                    })
+                    .catch(err => console.error('Error moving algorithm:', err));
             }
         } else {
             // Reorder
@@ -213,8 +247,10 @@ const Home = ({ setView, setTargetAlgo }) => {
                 group: targetPath // Ensure group matches target
             }));
 
-            await bulkUpdateAlgorithms(updates);
-            await loadData();
+            // Call async function without await - don't block UI
+            bulkUpdateAlgorithms(updates)
+                .then(() => loadData())
+                .catch(err => console.error('Error reordering algorithms:', err));
         }
     };
 
@@ -341,6 +377,11 @@ const Home = ({ setView, setTargetAlgo }) => {
                 onDrop={(e) => handleDrop(e, node.path, 'folder', node.path)}
             >
                 <div
+                    draggable
+                    onDragStart={(e) => {
+                        e.stopPropagation();
+                        handleDragStart(e, node.path, 'folder');
+                    }}
                     onClick={(e) => {
                         e.stopPropagation();
                         setExpandedPaths(prev => ({ ...prev, [node.path]: !prev[node.path] }));
@@ -350,7 +391,7 @@ const Home = ({ setView, setTargetAlgo }) => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '12px',
-                        cursor: 'pointer',
+                        cursor: 'grab',
                         background: dragOverItem?.id === node.path ? 'var(--bg-surface-hover)' : (isExpanded ? 'var(--bg-surface-hover)' : 'transparent'),
                         transition: 'background 0.2s'
                     }}
