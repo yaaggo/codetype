@@ -80,18 +80,18 @@ const MonkeyMode = ({ targetAlgo }) => {
             setInput(prev => prev.slice(0, -1));
         } else if (e.key === 'Enter') {
             e.preventDefault(); // Prevent textarea newline
-            const nextIndex = input.length + 1;
-            if (nextIndex < currentAlgo.code.length) {
-                let nextInput = input + '\n';
+            let nextInput = input + '\n';
+
+            // Auto-indent: check if the next line in the original code starts with spaces
+            if (nextInput.length < currentAlgo.code.length) {
                 const targetSlice = currentAlgo.code.slice(nextInput.length);
                 const match = targetSlice.match(/^ +/);
                 if (match) {
                     nextInput += match[0];
                 }
-                setInput(nextInput);
-            } else {
-                setInput(prev => prev + '\n');
             }
+
+            setInput(nextInput);
         } else if (e.key === 'Tab') {
             e.preventDefault();
             setInput(prev => prev + '    ');
