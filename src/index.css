@@ -186,3 +186,50 @@ textarea {
     padding: 0 !important;
   }
 }
+
+/* MonkeyMode Mobile Styles */
+@media (max-width: 768px) {
+  .monkey-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 16px !important;
+    padding: 12px !important;
+  }
+
+  .monkey-controls-left {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    width: 100%;
+  }
+
+  .monkey-controls-left>div:first-child {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .monkey-controls-left button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .monkey-select-group {
+    flex-direction: column !important;
+    width: 100%;
+  }
+
+  .monkey-controls-right {
+    justify-content: space-between !important;
+    width: 100%;
+    border-top: 1px solid var(--bg-surface-hover);
+    padding-top: 12px;
+  }
+
+  .code-viewport {
+    padding: 16px !important;
+    font-size: 0.9rem !important;
+    min-height: 50vh !important;
+    overflow-x: auto !important;
+    /* Allow horizontal scroll for long lines */
+  }
+}

@@ -168,7 +168,7 @@ const MonkeyMode = ({ targetAlgo }) => {
             ref={inputRef}
         >
             {/* Header Controls */}
-            <div style={{
+            <div className="monkey-header" style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
@@ -178,7 +178,7 @@ const MonkeyMode = ({ targetAlgo }) => {
                 borderRadius: 'var(--radius-lg)',
                 border: '1px solid var(--bg-surface-hover)'
             }}>
-                <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                <div className="monkey-controls-left" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                     <div style={{ display: 'flex', background: 'var(--bg-app)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
                         <button
                             onClick={() => setMode('random')}
@@ -213,7 +213,7 @@ const MonkeyMode = ({ targetAlgo }) => {
                     </div>
 
                     {mode === 'select' && (
-                        <div style={{ display: 'flex', gap: '10px' }}>
+                        <div className="monkey-select-group" style={{ display: 'flex', gap: '10px' }}>
                             <select
                                 onChange={(e) => setSelectedGroup(e.target.value)}
                                 value={selectedGroup || ''}
@@ -248,7 +248,7 @@ const MonkeyMode = ({ targetAlgo }) => {
                     )}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                <div className="monkey-controls-right" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                     {bestWpm > 0 && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-warning)', fontWeight: 'bold' }}>
                             <Trophy size={20} />
@@ -290,7 +290,7 @@ const MonkeyMode = ({ targetAlgo }) => {
             </div>
 
             {/* Code Viewport */}
-            <div style={{
+            <div className="code-viewport" style={{
                 position: 'relative',
                 fontFamily: 'var(--font-mono)',
                 fontSize: '1.2rem',
