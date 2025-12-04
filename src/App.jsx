@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Layout from './components/Layout';
 import Home from './components/Home';
 import MonkeyMode from './components/MonkeyMode';
+import DebugStorage from './components/DebugStorage';
 
 function App() {
   const [currentView, setCurrentView] = useState('home');
@@ -19,9 +20,12 @@ function App() {
   };
 
   return (
-    <Layout currentView={currentView} setView={setCurrentView}>
-      {renderView()}
-    </Layout>
+    <>
+      <Layout currentView={currentView} setView={setCurrentView}>
+        {renderView()}
+      </Layout>
+      <DebugStorage />
+    </>
   );
 }
 
