@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { getAlgorithms, saveWpm, getProgress } from '../data/storage';
+import { getAlgorithms, saveWpm, getProgress } from '../data/database';
 import { getSyntaxHighlights } from '../utils/syntax';
 import { Shuffle, List, RotateCcw, ArrowRight, CheckCircle2, Trophy } from 'lucide-react';
 
@@ -20,23 +20,31 @@ const MonkeyMode = ({ targetAlgo }) => {
     const inputRef = useRef(null);
 
     useEffect(() => {
-        const all = getAlgorithms();
-        setAlgos(all);
+        const loadData = async () => {
+            const all = await getAlgorithms();
+            setAlgos(all);
 
-        if (!currentAlgo && all.length > 0) {
-            const random = all[Math.floor(Math.random() * all.length)];
-            setCurrentAlgo(random);
-        }
+            if (!currentAlgo && all.length > 0) {
+                const random = all[Math.floor(Math.random() * all.length)];
+                setCurrentAlgo(random);
+            }
+        };
+        loadData();
+
         // Auto-focus on mount
         if (inputRef.current) inputRef.current.focus();
     }, []);
 
     useEffect(() => {
-        if (currentAlgo) {
-            const progress = getProgress();
-            const p = progress[currentAlgo.id] || {};
-            setBestWpm(p.bestWpm || 0);
-        }
+        const loadProgress = async () => {
+            if (currentAlgo) {
+                const progress = await getProgress();
+                const p = progress[currentAlgo.id] || {};
+                setBestWpm(p.bestWpm || 0);
+            }
+        };
+        loadProgress();
+
         // Focus when algo changes
         if (inputRef.current) inputRef.current.focus();
     }, [currentAlgo]);
@@ -90,7 +98,7 @@ const MonkeyMode = ({ targetAlgo }) => {
         }
     };
 
-    const finishTest = () => {
+    const finishTest = async () => {
         setCompleted(true);
         const timeInMinutes = (Date.now() - startTime) / 60000;
         const words = currentAlgo.code.length / 5;
@@ -105,7 +113,7 @@ const MonkeyMode = ({ targetAlgo }) => {
         setStats({ wpm, accuracy });
 
         // Save WPM
-        const isRecord = saveWpm(currentAlgo.id, wpm);
+        const isRecord = await saveWpm(currentAlgo.id, wpm);
         setIsNewRecord(isRecord);
         if (isRecord) setBestWpm(wpm);
     };

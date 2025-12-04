@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 import 'github-markdown-css/github-markdown.css';
-import { getAlgorithms, saveCustomAlgorithm, updateAlgorithm, bulkUpdateAlgorithms, deleteAlgorithm, getStreak, getProgress, getFolders, saveFolder, deleteFolder } from '../data/storage';
+import { getAlgorithms, saveCustomAlgorithm, updateAlgorithm, bulkUpdateAlgorithms, deleteAlgorithm, getStreak, getProgress, getFolders, saveFolder, deleteFolder } from '../data/database';
 import { Folder, FileCode, Plus, ChevronRight, ChevronDown, Play, Trash2, Flame, Brain, Trophy, Pencil, FolderPlus, FileText, Save, GripVertical, X, BookOpen } from 'lucide-react';
 
 const Home = ({ setView, setTargetAlgo }) => {
@@ -28,17 +28,22 @@ const Home = ({ setView, setTargetAlgo }) => {
         loadData();
     }, []);
 
-    const loadData = () => {
-        setAlgos(getAlgorithms());
-        setFolders(getFolders());
-        setStreak(getStreak());
+    const loadData = async () => {
+        const [algosData, foldersData, streakData, progressData] = await Promise.all([
+            getAlgorithms(),
+            getFolders(),
+            getStreak(),
+            getProgress()
+        ]);
 
-        const prog = getProgress();
-        setProgress(prog);
+        setAlgos(algosData);
+        setFolders(foldersData);
+        setStreak(streakData);
+        setProgress(progressData);
 
         const now = new Date();
         let count = 0;
-        Object.values(prog).forEach(p => {
+        Object.values(progressData).forEach(p => {
             if (p.dueDate && new Date(p.dueDate) <= now) count++;
         });
         setDueCount(count);
@@ -54,7 +59,7 @@ const Home = ({ setView, setTargetAlgo }) => {
             .join('\n');
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!newAlgo.title || !newAlgo.code) return;
 
@@ -62,39 +67,44 @@ const Home = ({ setView, setTargetAlgo }) => {
         let finalGroup = newAlgo.group.trim();
         if (finalGroup.endsWith('/')) finalGroup = finalGroup.slice(0, -1);
 
-        if (editingAlgo) {
-            const updated = {
-                ...editingAlgo,
-                title: newAlgo.title,
-                group: finalGroup || 'Uncategorized',
-                kind: newAlgo.kind,
-                code: cleanCode
-            };
-            updateAlgorithm(updated);
-        } else {
-            const algo = {
-                id: 'custom-' + Date.now(),
-                type: 'snippet',
-                title: newAlgo.title,
-                group: finalGroup || 'Uncategorized',
-                kind: newAlgo.kind,
-                code: cleanCode
-            };
-            saveCustomAlgorithm(algo);
-        }
+        try {
+            if (editingAlgo) {
+                const updated = {
+                    ...editingAlgo,
+                    title: newAlgo.title,
+                    group: finalGroup || 'Uncategorized',
+                    kind: newAlgo.kind,
+                    code: cleanCode
+                };
+                await updateAlgorithm(updated);
+            } else {
+                const algo = {
+                    id: 'custom-' + Date.now(),
+                    type: 'snippet',
+                    title: newAlgo.title,
+                    group: finalGroup || 'Uncategorized',
+                    kind: newAlgo.kind,
+                    code: cleanCode,
+                    sort_order: 0
+                };
+                await saveCustomAlgorithm(algo);
+            }
 
-        loadData();
-        setShowForm(false);
-        setEditingAlgo(null);
-        setNewAlgo({ title: '', group: '', kind: 'algorithm', code: '' });
+            await loadData();
+            setShowForm(false);
+            setEditingAlgo(null);
+            setNewAlgo({ title: '', group: '', kind: 'algorithm', code: '' });
+        } catch (error) {
+            alert('Error saving algorithm: ' + error.message);
+        }
     };
 
-    const handleCreateFolder = (path) => {
+    const handleCreateFolder = async (path) => {
         const name = prompt("Enter folder name:");
         if (name) {
             const newPath = path ? `${path}/${name}` : name;
-            saveFolder(newPath, '');
-            loadData();
+            await saveFolder(newPath, '');
+            await loadData();
             setExpandedPaths(prev => ({ ...prev, [path]: true }));
         }
     };
@@ -104,10 +114,10 @@ const Home = ({ setView, setTargetAlgo }) => {
         setMarkdownContent(currentContent || '');
     };
 
-    const handleSaveMarkdown = (path) => {
-        saveFolder(path, markdownContent);
+    const handleSaveMarkdown = async (path) => {
+        await saveFolder(path, markdownContent);
         setEditingMarkdownPath(null);
-        loadData();
+        await loadData();
     };
 
     // --- Drag and Drop Logic ---
@@ -145,7 +155,7 @@ const Home = ({ setView, setTargetAlgo }) => {
         setDragOverItem(null);
     };
 
-    const handleDrop = (e, targetId, type, targetPath, siblings = []) => {
+    const handleDrop = async (e, targetId, type, targetPath, siblings = []) => {
         e.preventDefault();
         e.stopPropagation();
         e.currentTarget.style.background = 'transparent';
@@ -168,8 +178,8 @@ const Home = ({ setView, setTargetAlgo }) => {
         if (type === 'folder') {
             // Move to folder
             if (sourceAlgo.group !== targetPath) {
-                updateAlgorithm({ ...sourceAlgo, group: targetPath });
-                loadData();
+                await updateAlgorithm({ ...sourceAlgo, group: targetPath });
+                await loadData();
                 setExpandedPaths(prev => ({ ...prev, [targetPath]: true }));
             }
         } else {
@@ -203,8 +213,8 @@ const Home = ({ setView, setTargetAlgo }) => {
                 group: targetPath // Ensure group matches target
             }));
 
-            bulkUpdateAlgorithms(updates);
-            loadData();
+            await bulkUpdateAlgorithms(updates);
+            await loadData();
         }
     };
 

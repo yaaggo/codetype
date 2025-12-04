@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { getStreak } from '../data/storage';
+import { getStreak } from '../data/database';
 
 const Dashboard = ({ setView }) => {
     const [streak, setStreak] = useState({ count: 0 });
 
     useEffect(() => {
-        setStreak(getStreak());
+        const loadStreak = async () => {
+            const streakData = await getStreak();
+            setStreak(streakData);
+        };
+        loadStreak();
     }, []);
 
     return (
