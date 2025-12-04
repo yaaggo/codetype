@@ -75,9 +75,11 @@ const MonkeyMode = ({ targetAlgo }) => {
             setStartTime(Date.now());
         }
 
+        // Handle special keys that might not trigger onChange or need specific behavior
         if (e.key === 'Backspace') {
             setInput(prev => prev.slice(0, -1));
         } else if (e.key === 'Enter') {
+            e.preventDefault(); // Prevent textarea newline
             const nextIndex = input.length + 1;
             if (nextIndex < currentAlgo.code.length) {
                 let nextInput = input + '\n';
@@ -93,9 +95,33 @@ const MonkeyMode = ({ targetAlgo }) => {
         } else if (e.key === 'Tab') {
             e.preventDefault();
             setInput(prev => prev + '    ');
-        } else if (e.key.length === 1) {
-            setInput(prev => prev + e.key);
         }
+        // Note: Normal characters are handled by onChange to support mobile virtual keyboards better
+    };
+
+    const handleChange = (e) => {
+        if (completed) return;
+
+        if (!startTime) {
+            setStartTime(Date.now());
+        }
+
+        const value = e.target.value;
+        // We only care about the last character added if it's an addition
+        // But since we control the value, we can just check the difference
+        // However, for simplicity in this specific "typing test" context where we track exact string:
+
+        // Actually, simpler approach for mobile:
+        // The textarea is hidden and empty? No, if we keep it empty, backspace is hard.
+        // Let's try to just capture the input data.
+
+        const nativeEvent = e.nativeEvent;
+        if (nativeEvent.inputType === 'insertText' && nativeEvent.data) {
+            setInput(prev => prev + nativeEvent.data);
+        }
+
+        // Reset textarea value to keep it clean for next input
+        e.target.value = '';
     };
 
     const finishTest = async () => {
@@ -159,14 +185,30 @@ const MonkeyMode = ({ targetAlgo }) => {
     const remainingLines = Math.max(0, lines.length - (startLine + VISIBLE_LINES));
 
     return (
-        <div
-            style={{ outline: 'none' }}
-            tabIndex={0}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            ref={inputRef}
-        >
+        <div style={{ outline: 'none', position: 'relative' }}>
+            <textarea
+                ref={inputRef}
+                onKeyDown={handleKeyDown}
+                onChange={handleChange}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                style={{
+                    position: 'absolute',
+                    opacity: 0,
+                    top: 0,
+                    left: 0,
+                    height: '1px',
+                    width: '1px',
+                    zIndex: -1,
+                    pointerEvents: 'none',
+                    resize: 'none'
+                }}
+                autoCapitalize="none"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
+            />
+
             {/* Header Controls */}
             <div className="monkey-header" style={{
                 display: 'flex',
