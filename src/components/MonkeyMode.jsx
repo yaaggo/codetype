@@ -94,7 +94,11 @@ const MonkeyMode = ({ targetAlgo }) => {
             setInput(nextInput);
         } else if (e.key === 'Tab') {
             e.preventDefault();
-            setInput(prev => prev + '    ');
+            if (e.shiftKey) {
+                reset();
+            } else {
+                setInput(prev => prev + '    ');
+            }
         }
         // Note: Normal characters are handled by onChange to support mobile virtual keyboards better
     };
@@ -312,6 +316,34 @@ const MonkeyMode = ({ targetAlgo }) => {
                             Next Random <ArrowRight size={16} />
                         </button>
                     )}
+
+                    <button
+                        onClick={reset}
+                        title="Retry (Shift + Tab)"
+                        style={{
+                            color: 'var(--text-muted)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontWeight: 500,
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '8px',
+                            borderRadius: 'var(--radius-sm)',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={e => {
+                            e.currentTarget.style.color = 'var(--text-primary)';
+                            e.currentTarget.style.background = 'var(--bg-surface-hover)';
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.color = 'var(--text-muted)';
+                            e.currentTarget.style.background = 'transparent';
+                        }}
+                    >
+                        <RotateCcw size={18} />
+                    </button>
                 </div>
             </div>
 
