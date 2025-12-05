@@ -56,6 +56,28 @@ const MonkeyMode = ({ targetAlgo }) => {
         }
     }, [input, currentAlgo]);
 
+    useEffect(() => {
+        if (!completed) return;
+
+        const handleGlobalKeyDown = (e) => {
+            if (e.key === 'Tab' && e.shiftKey) {
+                e.preventDefault();
+                reset();
+            } else if (e.key === 'r' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                // Only trigger if no modifiers (other than shift, maybe? 'r' usually implies lowercase, but let's be safe)
+                // Actually user said 'r', so let's check for 'r' or 'R'.
+                if (mode === 'random') {
+                    nextRandom();
+                } else {
+                    reset();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleGlobalKeyDown);
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    }, [completed, mode, algos]); // Depend on mode and algos for nextRandom
+
     const syntaxStyles = useMemo(() => {
         if (!currentAlgo) return [];
         return getSyntaxHighlights(currentAlgo.code);
